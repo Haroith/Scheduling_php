@@ -1,2 +1,2 @@
 <?php
-    print_r('Let\'s get start the scheduling project');
+    print_r('Let\'s get started the scheduling project');
