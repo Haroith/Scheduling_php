@@ -1,20 +1,34 @@
-<?
+<?php
 // Реализация алгоритма на основе реальной статистики и настроек одного из проектов
+// The algorithm is based on the statistics of the real contact centre
 // Берём за основу одну неделю в июне 2022 года
+// We took the statistic of one week in June 2022
 // Основная часть работ покрывается сменами по 9 часов, из которых суммарно 1 час - перерывы
+// The main part of the schedule consists of 9 hours shifts: 8 hours work and 1 hour breaks
 // Упрощаем задачу: рассматриваем 1 первые сутки с 5:00 по 1:00
+// We made the task simpler: we generated the schedule for one day from 5:00 am to 1:00 am
 // Такой период из-за ограничения на начало смен с 5:00 по 16:00
+// We worked with such a period because of constrainments: shifts can start from 5:00 am to 4:00 pm
 // Упрощаем задачу: считаем, что недостатка в количестве операторов у нас нет
+// We made the task even simpler: we assume that the number of agents is infinite
 // На будущее - если будет недостаток операторов, то прогноз равномерно уменьшаем
+// For future versions - if we have insufficient operators, than we'll lower the forecast
 // и пытаемся подогнать смены под уменьшенный прогноз
+// We'll try to cover the lowered forecast by shifts
 // Упрощаем задачу: покрываем весь период только одним типом смен
+// We made the task simpler: we use only one type of shifts
 
 $dayHours = 20; // Количество часов в дне, для которого ищем расписание
+// The number of hours in the working day that should be covered by schedule
 // Даже на круглосуточных линиях можно разбить задачу поиска расписания по дням
+// Even for 24-hours inbound line we can divide thee task by days
 // TODO придумать алгоритм разделения предоставленного временного промежутка на дни
+// TODO develop the algorithm for dividing the scheduling period by days
 $dayQuarters = $dayHours * 4; // Кол-во 15тиминутных промежутков в дне
+// The number of 15 minutes periods in a day
 
 // Прогноз звонков
+// Calls forecast for every 15 minutes
 $forecast = [
     3,
     1,
@@ -99,6 +113,7 @@ $forecast = [
 ];
 
 // Прогноз FTE
+// FTE forecast for every 15 minutes
 $agentsNeeded = [
     3,
     2,
@@ -183,7 +198,9 @@ $agentsNeeded = [
 ];
 
 // Значения AHT в каждый 15ти минутный промежуток
+// AHT for every 15 minutes
 // Понадобится позже при проверке SL
+// It is required in the end to check SL
 $ahtSeconds = [
     266,
     306,
@@ -268,12 +285,17 @@ $ahtSeconds = [
 ];
 
 // Имеющиеся смены
+// Array for shifts
 // 9-часовые смены без перерывов
+// First - 9 hour shifts without breaks
 $shifts = [];
 // i - кол-во разных смен
+// i - the number of shifts
 // j - на месте ли FTE
+// j - is FTE working in this 15 minutes range
 
 // Смены могут начинаться только в определённое время, редко указывается "any time"
+//
 $startFillingPoints = [ // С какой 15минутки начать заполнять массивы
     0, // 5:00
     //2, // 5:30
