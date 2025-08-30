@@ -290,16 +290,17 @@ $ahtSeconds = [
 // First - 9 hour shifts without breaks
 $shifts = [];
 // i - кол-во разных смен
-// i - the number of shifts
+// i - the number of different shifts
 // j - на месте ли FTE
-// j - is FTE working in this 15 minutes range
+// j - is FTE working during this 15 minutes interval
 
 // Смены могут начинаться только в определённое время, редко указывается "any time"
-//
+// Shifts start only in particular moments. "Any time" is used very rarely.
 $startFillingPoints = [ // С какой 15минутки начать заполнять массивы
-    0, // 5:00
+    // From what 15 minutes interval we need to fill arrays
+    0, // 5:00 am
     //2, // 5:30
-    4, // 6:00
+    4, // 6:00 am
     //6, // 6:30
     8, // 7:00
     //10,// 7:30
@@ -313,13 +314,13 @@ $startFillingPoints = [ // С какой 15минутки начать запо�
     //26,// 11:30
     28,// 12:00
     //30,// 12:30
-    32,// 13:00
+    32,// 13:00 // 1:00 pm
     //34,// 13:30
-    36,// 14:00
+    36,// 14:00 // 2:00 pm
     //38,// 14:30
-    40,// 15:00
+    40,// 15:00 // 3:00 pm
     //42,// 15:30
-    44,// 16:00
+    44,// 16:00 // 4:00 pm
     //46,// 16:30
     //48,// 17:00
     //50,// 17:30
@@ -332,12 +333,16 @@ $startFillingPoints = [ // С какой 15минутки начать запо�
     //64,// 21:00
 ];
 // Размерность пространства смен - количество возможных точек начала смен
+// Space dimension of shifts - the number of possible shift starting points
 $dimension = count($startFillingPoints);
 
 $shiftHours = 9; // Кол-во часов в смене - пользователь может менять, могут быть смены по 4, 6.5, 9 или 12 часов
+// The number of hours  in a shift - a user can change that setting, shifts can last 4, 6.5, 9 or 12 hours
 $shiftQuarters = $shiftHours * 4; // Кол-во 15тиминутных промежутков в смене
+// The number of 15 minutes intervals in a shift
 
 // Заполнение 9ти часовыми промежутками работы без перерывов
+// Here we fill thee timeline by 9 hour working intervals without breaks
 for ($i = 0; $i < $dimension; $i++){
     for ($j = 0; $j < $dayQuarters; $j++) {
         if ($j >= $startFillingPoints[$i] && $j < $startFillingPoints[$i] + $shiftQuarters) {
@@ -351,6 +356,7 @@ print_r('<pre>');
 
 print_r('shifts:<br>');
 // Вывод для проверки
+// Output on the screen for checking
 for ($i = 0; $i < $dimension; $i++){
     for ($j = 0; $j < $dayQuarters; $j++) {
         print_r($shifts[$i][$j]);
@@ -362,6 +368,7 @@ print_r('<br>');
 
 print_r('agentsNeeded:<br>');
 // Вывод рядом массива с прогнозом FTE
+// Output the array with the forecasted FTE
 for ($j = 0; $j < $dayQuarters; $j++) {
     print_r($agentsNeeded[$j]);
     if(strlen($agentsNeeded[$j]) == 1){
@@ -374,10 +381,15 @@ print_r('<br>');
 print_r('<br>');
 
 // Получили массив смен, из которых будем составлять расписание
+// We have got the array with shifts, we create the schedule with them
 // Разумеется, в реальных задачах нужно будет вытаскивать границы смен и время начала из БД
+// Of course, during the real schedule generation we need to extract possible start times from a database
 // Границы смен надо будет преобразовывать в массивы нулей и единиц с разбивкой по 15 минут
+// Shift boundaries need to be converted into arrays of 0s and 1s
 // Эти смены будут разбирать фантомы, которых у нас бесконечное количество
+// Phantoms will later take those shifts, the number of phantoms is infinite
 // Также фантомы условно не ограничены правилами "между сменами"
+//
 // Правила "между сменами" будут проверяться при назначении живых людей на место фантомов
 // Отдаём на первом этапе проверку самого сложного на частичный откуп пользователям
 
