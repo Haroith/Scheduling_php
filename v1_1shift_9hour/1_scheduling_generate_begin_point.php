@@ -389,13 +389,17 @@ print_r('<br>');
 // Эти смены будут разбирать фантомы, которых у нас бесконечное количество
 // Phantoms will later take those shifts, the number of phantoms is infinite
 // Также фантомы условно не ограничены правилами "между сменами"
-//
+// We assume that there is no constraints about non-working time between shifts
 // Правила "между сменами" будут проверяться при назначении живых людей на место фантомов
+// The constraints "between shifts" will be checked when agents are given phantom shifts
 // Отдаём на первом этапе проверку самого сложного на частичный откуп пользователям
+// In this first draft of the algorithm we delegate the most complicated constraint to users
 
 // Массив фантомов размерности равный количеству видов смен - это кол-во взятых для расписания смен
+// Phantoms array is equal the number of shifts - this is the number of taken shifts for this schedule
 $phantoms = [];
 // Заполнение значениями по умолчанию
+// Filling with default values
 for ($i = 0; $i < $dimension; $i++) {
     $phantoms[] = 0;
 }
@@ -403,13 +407,16 @@ for ($i = 0; $i < $dimension; $i++) {
 print_r('<br>');
 
 // Создаём копию массива прогнозируемых FTE и обнуляем, чтобы понимать, сколько мы по расписанию FTE набрали
+// Make a copy array of forecasted FTE and fill with 0s to understand, how many FTE we have taken by scheduling
 // По новому массиву будем проверять соответствие прогнозу
+// We check adherence between the forecast and the schedule with the help of this array
 $phantomsScheduled = $agentsNeeded;
 for ($j = 0; $j < $dayQuarters; $j++) {
     $phantomsScheduled[$j] = 0;
 }
 
 // Массив разниц в FTE "необходимые минус расписание"
+// Array of differences
 // "По расписанию" уже задан с нулями, так что просто копируем
 $difference = $phantomsScheduled;
 
