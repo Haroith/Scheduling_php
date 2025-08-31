@@ -529,13 +529,14 @@ function C($s,$a) {
         $secondStep = $secondStep + $firstStep;
         $c = $firstStep / $secondStep;
     } else { // При таком значении в функции выше SL получится равным нулю
-        //
+        // With such a value SL is equal 0
         $c = 1;
     }
     return $c;
 }
 
 // Функция вычисления факториала
+// Function for factorial calculation
 function Factorial($x) {
     $y = 1;
     for ($i = 1; $i < $x; $i++) {
@@ -545,12 +546,15 @@ function Factorial($x) {
 }
 
 // Вычисляем средневзвешенный по количеству прогнозируемых звонков SL
+// Calculating weighted average SL by the number of forecasted calls
 // Чистый SL на каждом промежутке
+// First - SL on every interval
 $shiftsSL = [];
 for ($j = 0; $j < $dayQuarters; $j++) {
     $shiftsSL[$j] = ErlangSL($forecast[$j], $phantomsScheduled[$j], $ahtSeconds[$j]);
 }
 // "взвешиваем" SL по прогнозу количества звонков
+// Second - add weight to SL by the calls number
 $sumSLWeighted = 0;
 $sumForecast = 0;
 for ($j = 0; $j < $dayQuarters; $j++) {
@@ -559,8 +563,10 @@ for ($j = 0; $j < $dayQuarters; $j++) {
 }
 $averageWeightedSL = $sumSLWeighted / $sumForecast;
 // Приводим к отображению в виде процентов
+// Convert to percents
 $averageWeightedSL = round($averageWeightedSL * 100,2,PHP_ROUND_HALF_UP) . '%';
 
 print_r('<br>');
-print_r('<br>Получившийся SL после первого шага = ');
+//print_r('<br>Получившийся SL после первого шага = ');
+print_r('<br>SL after the first step = ');
 print_r($averageWeightedSL);
