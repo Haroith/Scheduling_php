@@ -418,22 +418,30 @@ for ($j = 0; $j < $dayQuarters; $j++) {
 // Массив разниц в FTE "необходимые минус расписание"
 // Array of differences
 // "По расписанию" уже задан с нулями, так что просто копируем
+// This array is already filled with 0s "as scheduled", so we need only to copy it
 $difference = $phantomsScheduled;
 
 for($j = 0; $j < $dayQuarters; $j++) {
     $difference[$j] = $agentsNeeded[$j] - $phantomsScheduled[$j];
     // $difference>0 ? Если да, то добавлять смен столько, какая разница
+    // $difference>0 ? If yes, then to add so many shifts as the difference
 }
 // Идём по большому циклу фантомов (видов смен) - сколько их нужно набрать
+// Go by larger loop of phantoms - how many we should  take them
 // Проверяем соответствие прогнозу по фантомным FTE
+// We should check the difference between forecast and schedule of phantom FTEs
 for($i = 0; $i < $dimension; $i++){
     for($j = 0; $j < $dayQuarters; $j++){
         // Важное условие!
+        // Important condition!
         // $difference>0 ? Если да, то добавлять смен столько, какая разница
+        // difference>0 ? If yes, then to add so many shifts as the difference
         // Добавлять смены можно только в некоторых местах, поэтому проверяем разницу только в этих местах
+        // We are permitted to add shifts only in particular moments, so we need to check difference only in those moments
         if($difference[$j] > 0 && $j == $startFillingPoints[$i]) {
             $phantoms[$i] = $phantoms[$i] + $difference[$j];
             // пересчитать $phantomsScheduled и $difference
+            // recalculate $phantomsScheduled and $difference
             for($k = $startFillingPoints[$i]; $k < $startFillingPoints[$i] + $shiftQuarters; $k++){
                 $phantomsScheduled[$k] = $phantomsScheduled[$k] + $phantoms[$i];
             }
@@ -445,11 +453,13 @@ for($i = 0; $i < $dimension; $i++){
     }
 }
 
-print_r('Сколько в итоге понадобилось phantoms<br>');
+// print_r('Сколько в итоге понадобилось phantoms<br>');
+print_r('How many phantoms are needed<br>');
 var_dump($phantoms);
 
 print_r('<br>');
 // Проверка кол-ва фантомных FTE
+// Checking the number of phantom  FTE
 print_r('phantomsScheduled:<br>');
 for ($j = 0; $j < $dayQuarters; $j++) {
     print_r($phantomsScheduled[$j]);
@@ -462,6 +472,7 @@ for ($j = 0; $j < $dayQuarters; $j++) {
 print_r('<br>');
 print_r('<br>');
 // Проверка массива разниц прогноза и составленного расписания
+// Checking the array of difference between the forecast and the schedule
 print_r('difference:<br>');
 for($k = 0; $k < $dayQuarters; $k++) {
     $difference[$k] = $agentsNeeded[$k] - $phantomsScheduled[$k];
@@ -469,7 +480,9 @@ for($k = 0; $k < $dayQuarters; $k++) {
     print_r(' ');
 }
 // Проверить SL за день.
+// To check daily SL
 // Вывести итоговый SL
+// To show the final SL
 
 // Подготовительные вспомогательные функции для вычисления SL
 // $fc - прогноз звонков за 15 минут
