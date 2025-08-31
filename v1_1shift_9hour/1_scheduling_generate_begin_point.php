@@ -485,17 +485,26 @@ for($k = 0; $k < $dayQuarters; $k++) {
 // To show the final SL
 
 // Подготовительные вспомогательные функции для вычисления SL
+// Support functions for calculating SL
 // $fc - прогноз звонков за 15 минут
+// $fc - calls forecast for 15 minutes
 // $agents - количество агентов по факту, а не по прогнозу
+// $agents - actual number of agents, not forecast
 // $aht - средняя продолжительность обслуживания в секундах
+// $aht - average handling time in seconds
 function ErlangSL($fc,$agents,$aht) {
     if($aht == 0){
         $SL = 0; // Т.к. при вычислении средневзвешенного SL умножается на количество звонков, то
+        // Because calculation of weighted average SL needs to multiply SL on the number of calls, so
     } else {
         $fc = $fc/15; // Прогноз звонков за 1 минуту
+        // Calls forecast for 1 minute
         $beta = $aht/60; // Переводим из AHT в секундах в бэта в минутах
+        // Converting from AHT in seconds into beta in minutes
         $a = $beta * $fc; // сколько рабочих минут потребуется для обслуживания поступивших звонков
+        // How many work minutes are needed for handling actual calls
         $tta = 20/60; // Считаем целевой SL = 80% на 20 секунд, приводим 20 секунд к минутам
+        // Assume goal SL = 80% per 20 seconds, convert 20 seconds into minutes
         $tempExp = -($agents/$beta - $fc)*$tta;
         $SL = 1 - C($agents, $a) * exp($tempExp);
         if ($SL<0) {
@@ -506,9 +515,12 @@ function ErlangSL($fc,$agents,$aht) {
 }
 
 // Вспомогательная функция для вычисления SL
+// The support function for SL calculating
 function C($s,$a) {
     $denominator = Factorial($s-1)*($s-$a); // Знаменатель
+    // denominator
     if($denominator <> 0){ // Иногда знаменатель получается равным нулю, в этом случае нужно SL свести в ноль
+        // Sometime denominator equals 0, in this case we assume SL equals 0
         $firstStep = pow($a,$s)/$denominator;
         $secondStep = 0;
         for ($j=0; $j<=$s-1; $j++){
@@ -517,6 +529,7 @@ function C($s,$a) {
         $secondStep = $secondStep + $firstStep;
         $c = $firstStep / $secondStep;
     } else { // При таком значении в функции выше SL получится равным нулю
+        //
         $c = 1;
     }
     return $c;
