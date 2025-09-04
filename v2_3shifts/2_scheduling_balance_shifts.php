@@ -1,21 +1,21 @@
 <?
-// Попытаемся сбалансировать начальное состояние расписания относительно середины дня
-// Считаем, что для 80-90% случаев прогноз звонков и FTE - это горка с одной условной вершиной
-// При подборе смен наслоением получается:
-// - в первой половине дня недостаффинг
-// - во второй половине дня перестаффинг
+// Let's try to balance the initial state of the schedule relative to the middle of the day
+// We assume that in 80–90% of cases, the call and FTE forecast forms a single "peak" with one conditional top
+// When layering shifts, we get:
+// - understaffing in the first half of the day
+// - overstaffing in the second half of the day
 
-// Будем искать точки (15ти минутные), где
-// разница между прогнозом FTE (требуемыми FTE) и составленным расписанием максимальна
-// В этих точках будем добавлять/прибавлять смены в зависимости от недо/пере стаффинга
-// Добавлять и прибавлять смены будем не до нулевой разницы, а до +/- 1 (один)
-// Нам ещё нужно будет на третьем шаге разместить перерывы, для них надо оставить место
+// We will look for points (15-minute intervals) where
+// the difference between the FTE forecast (required FTE) and the assembled schedule is maximal
+// At these points, we will add/increase shifts depending on under- or over-staffing
+// We will add and increase shifts not until the difference is zero, but until +/- 1
+// We still need to place breaks in the third step, so we must leave room for them
 
-print_r('Первый шаг<br>');
-print_r('Подбираем изначальную точку расписания');
+print_r('First step<br>');
+print_r('Selecting the initial schedule starting point');
 include_once('1_scheduling_generate_begin_point.php');
-print_r('<br><br>Второй шаг<br>');
-print_r('Балансируем недостаффинг и перестаффинг');
+print_r('<br><br>Second step<br>');
+print_r('Balancing under- and over-staffing');
 /*
 // Ищем точку в difference с наибольшим модулем
 $maxAbsoluteDifferenceKey = 0;

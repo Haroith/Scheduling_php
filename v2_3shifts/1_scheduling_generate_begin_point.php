@@ -1,20 +1,20 @@
 <?
-// Реализация алгоритма на основе проекта 0448
-// смены - 9 часов, 6.5 часов, 4.25 часов
-// Берём за основу неделю с 20.06.2022 по 26.06.2022
-// Упрощаем задачу: рассматриваем 1 первые сутки с 20.06.2022 5:00 по 20.06.2022 1:00
-// Такой период из-за ограничения на начало смен с 5:00 по 16:00
-// Упрощаем задачу: считаем, что недостатка в количестве операторов у нас нет
-// На будущее - если будет недостаток операторов, то прогноз равномерно уменьшаем
-// и пытаемся подогнать смены под уменьшенный прогноз
-// Пытаемся решить задачу имея три вида смен
+// Implementation of the algorithm based on project 0448
+// Shift lengths: 9 hours, 6.5 hours, 4.25 hours
+// Base week: 20.06.2022 to 26.06.2022
+// Simplification: only the first day from 20.06.2022 5:00 to 20.06.2022 1:00
+// Such a period is chosen because of the restriction that shifts can only start between 5:00 and 16:00
+// Simplification: assume no shortage of operators
+// For the future: if there is a shortage of operators, reduce the forecast evenly
+// and try to fit shifts to the reduced forecast
+// Trying to solve the problem with three types of shifts
 
-$dayHours = 20; // Количество часов в дне, для которого ищем расписание
-// Даже на круглосуточных линиях можно разбить задачу поиска расписания по дням
-// TODO придумать алгоритм разделения предоставленного временного промежутка на дни
-$dayQuarters = $dayHours * 4; // Кол-во 15тиминутных промежутков в дне
+$dayHours = 20; // Number of hours in the day we are scheduling for
+// Even on 24/7 lines the scheduling problem can be split by days
+// TODO develop an algorithm to split the provided time range into days
+$dayQuarters = $dayHours * 4; // Number of 15-minute intervals in the day
 
-// Прогноз звонков
+// Forecasted calls
 $forecast = [
     3,
     1,
@@ -98,7 +98,7 @@ $forecast = [
     1,
 ];
 
-// Прогноз FTE
+// Forecasted FTE
 $agentsNeeded = [
     3,
     2,
@@ -182,8 +182,8 @@ $agentsNeeded = [
     2,
 ];
 
-// Значения AHT в каждый 15ти минутный промежуток
-// Понадобится позже при проверке SL
+// AHT values per 15-minute interval
+// Needed later when checking SL
 $ahtSeconds = [
     266,
     306,
@@ -267,21 +267,21 @@ $ahtSeconds = [
     306,
 ];
 
-// Имеющиеся смены
-// 9-часовые смены без перерывов
-// 6.5-часовые смены без перерывов
-// 4.25-часовые смены без перерывов
-$shiftKinds = 3; // Количество видов смен
+// Available shifts
+// 9-hour shifts without breaks
+// 6.5-hour shifts without breaks
+// 4.25-hour shifts without breaks
+$shiftKinds = 3; // Number of shift types
 for($k=0; $k<$shiftKinds; $k++){
     $shifts[$k] = [];
 }
-// k - виды смен по количеству часов в смене
-// i - кол-во разных смен
-// j - на месте ли FTE
+// k - shift type (by shift length in hours)
+// i - number of different shifts
+// j - whether an FTE is present at a given time
 
-// Смены могут начинаться только в определённое время, редко указывается "any time"
-// 9 часовые начала
-$startFillingPoints[0] = [ // С какой 15минутки начать заполнять массивы
+// Shifts can only start at certain times, rarely at "any time"
+// 9-hour shift starting points
+$startFillingPoints[0] = [ // 15-min slot index to start filling arrays
     0, // 5:00
     //2, // 5:30
     4, // 6:00
@@ -317,8 +317,8 @@ $startFillingPoints[0] = [ // С какой 15минутки начать зап
     //64,// 21:00
 ];
 
-// 6.5 часовые начала
-$startFillingPoints[1] = [ // С какой 15минутки начать заполнять массивы
+// 6.5-hour shift starting points
+$startFillingPoints[1] = [ // 15-min slot index to start filling arrays
     0, // 5:00
     //2, // 5:30
     4, // 6:00
@@ -354,8 +354,8 @@ $startFillingPoints[1] = [ // С какой 15минутки начать зап
     //64,// 21:00
 ];
 
-// 4.25 часовые начала
-$startFillingPoints[2] = [ // С какой 15минутки начать заполнять массивы
+// 4.25-hour shift starting points
+$startFillingPoints[2] = [ // 15-min slot index to start filling arrays
     //0, // 5:00
     //2, // 5:30
     //4, // 6:00
@@ -395,22 +395,22 @@ $startFillingPoints[2] = [ // С какой 15минутки начать зап
 ];
 print_r('<pre>');
 
-// Размерность пространства смен - количество возможных точек начала смен
-$dimension = []; // Размерность для каждого типа смен отдельно
-$summaryDimension = 0; // Общая размерность отдельно
+// Shift space dimensionality = number of possible shift starting points
+$dimension = []; // Dimensionality for each shift type
+$summaryDimension = 0; // Total dimensionality
 for($k=0; $k<$shiftKinds; $k++){
     $dimension[$k] = count($startFillingPoints[$k]);
     $summaryDimension += $dimension[$k];
 }
 
-$shiftHours[0] = 9; // Кол-во часов в смене - пользователь может менять, могут быть смены по 4, 6.5, 9 или 12 часов
+$shiftHours[0] = 9; // Shift length in hours – user can change, shifts may be 4, 6.5, 9, or 12 hours
 $shiftHours[1] = 6.5;
 $shiftHours[2] = 4.25;
 for($k=0; $k<$shiftKinds; $k++){
-    $shiftQuarters[$k] = $shiftHours[$k] * 4; // Кол-во 15тиминутных промежутков в смене
+    $shiftQuarters[$k] = $shiftHours[$k] * 4; // The number of  15 minutes intervals in a shift
 }
 
-// Заполнение N часовыми промежутками работы без перерывов
+// Filling N-hour working periods without breaks
 for($k=0; $k<$shiftKinds; $k++) {
     for ($i = 0; $i < $dimension[$k]; $i++) {
         for ($j = 0; $j < $dayQuarters; $j++) {
@@ -425,7 +425,7 @@ for($k=0; $k<$shiftKinds; $k++) {
 print_r('<pre>');
 
 print_r('shifts:<br>');
-// Вывод для проверки
+// Output for verification
 for($k=0; $k<$shiftKinds; $k++) {
     for ($i = 0; $i < $dimension[$k]; $i++) {
         for ($j = 0; $j < $dayQuarters; $j++) {
@@ -438,7 +438,7 @@ for($k=0; $k<$shiftKinds; $k++) {
 print_r('<br>');
 
 print_r('agentsNeeded:<br>');
-// Вывод рядом массива с прогнозом FTE
+// Output of the array with forecasted FTE
 for ($j = 0; $j < $dayQuarters; $j++) {
     print_r($agentsNeeded[$j]);
     if(strlen($agentsNeeded[$j]) == 1){
@@ -450,18 +450,18 @@ for ($j = 0; $j < $dayQuarters; $j++) {
 print_r('<br>');
 print_r('<br>');
 
-// Получили массив смен, из которых будем составлять расписание
-// Разумеется, в реальных задачах нужно будет вытаскивать границы смен и время начала из БД
-// Границы смен надо будет преобразовывать в массивы нулей и единиц с разбивкой по 15 минут
-// Эти смены будут разбирать фантомы, которых у нас бесконечное количество
-// Также фантомы условно не ограничены правилами "между сменами"
-// Правила "между сменами" будут проверяться при назначении живых людей на место фантомов
-// Отдаём на первом этапе проверку самого сложного на частичный откуп пользователям
+// Obtained an array of shifts to build the schedule from
+// In real tasks, shift boundaries and start times must be taken from a DB
+// Shift boundaries must be converted into arrays of 0s and 1s with 15-min intervals
+// These shifts will be “taken” by phantoms, of which we have an infinite number
+// Phantoms are not restricted by “between shifts” rules
+// Those rules will be checked later when assigning real agents instead of phantoms
+// At the first stage, part of the hardest checking is shifted onto users
 
-// Массив фантомов содержит внутри массивы фантомов
-// размерности равные количеству видов смен - это кол-во взятых для расписания смен
+// Phantom array contains arrays of phantoms
+// Its dimensions equal the number of shift types – i.e. the number of shifts used in the schedule
 $phantoms = [];
-// Заполнение значениями по умолчанию
+// Filling by default values
 for($k=0; $k<$shiftKinds; $k++){
     for ($i = 0; $i < $dimension[$k]; $i++) {
         $phantoms[$k][] = 0;
@@ -470,26 +470,27 @@ for($k=0; $k<$shiftKinds; $k++){
 
 print_r('<br>');
 
-// Создаём копию массива прогнозируемых FTE и обнуляем, чтобы понимать, сколько мы по расписанию FTE набрали
-// По новому массиву будем проверять соответствие прогнозу
+// Create a copy of the forecasted FTE array and reset it to zero
+// to track how much FTE is covered by the schedule
+// This new array will be used to check alignment with the forecast
 $phantomsScheduled = $agentsNeeded;
 for ($j = 0; $j < $dayQuarters; $j++) {
     $phantomsScheduled[$j] = 0;
 }
 
-// Массив разниц в FTE "необходимые минус расписание"
-// "По расписанию" уже задан с нулями, так что просто копируем
+// Difference array = FTE “needed minus scheduled”
+// “Scheduled” is initialised with zeros, so just copy
 $difference = $phantomsScheduled;
 
 for($j = 0; $j < $dayQuarters; $j++) {
     $difference[$j] = $agentsNeeded[$j] - $phantomsScheduled[$j];
 }
 
-// Вот здесь главная обработка!
+// Here comes the main processing!
 
-// Допустим, будем добавлять по 1 штуке по очереди
-// Не факт, что это оптимальный алгоритм,
-// Также из-за ограничений количества здесь могут возникнуть проблемы
+// For now, we add 1 shift at a time in sequence
+// Not guaranteed to be optimal
+// Because of the constraints, problems may occur
 
 
 print_r('difference:<br>');
@@ -500,15 +501,15 @@ for($k = 0; $k < $dayQuarters; $k++) {
 print_r('<br><br>');
 
 
-for($j = 0; $j < $dayQuarters; $j++){ // По 15ти-минуткам дня
-    $count=0; // Заглушка, чтоб не было бесконечного цикла
-    while ($difference[$j] > 0 && $count<100){ // До тех пор пока не заполнится разница, но в точках, где это возможно!
-        for($t=0; $t<$shiftKinds; $t++){ // По типам смен // TODO В этом месте можно выбирать тип смены случайно, а не последовательно
-            for ($i=0; $i<$dimension[$t]; $i++){// По всем началам каждого типа смены
+for($j = 0; $j < $dayQuarters; $j++){ // By 15 intervals of a day
+    $count=0; // The flag to avoid the infinite loop
+    while ($difference[$j] > 0 && $count<100){ // Until the difference is filled, but only in points where it's possible
+        for($t=0; $t<$shiftKinds; $t++){ // By shift types // TODO In this place we can choose the shift type randomly, not straightly
+            for ($i=0; $i<$dimension[$t]; $i++){ // By every starting point of every shift type
                 if ($difference[$j] > 0 && $j == $startFillingPoints[$t][$i]){
 
-                    $phantoms[$t][$i] = $phantoms[$t][$i] + 1; // Добавляем одну смену одного вида при одной итерации
-                    // пересчитать $phantomsScheduled и $difference
+                    $phantoms[$t][$i] = $phantoms[$t][$i] + 1; // Adding one shift of one type during one iteration
+                    // recalculate $phantomsScheduled and $difference
                     for($k = $startFillingPoints[$t][$i]; $k < $startFillingPoints[$t][$i] + $shiftQuarters[$t]; $k++){
                         $phantomsScheduled[$k] = $phantomsScheduled[$k] + 1;
                     }
@@ -520,9 +521,9 @@ for($j = 0; $j < $dayQuarters; $j++){ // По 15ти-минуткам дня
                     print_r('<br>');
                 }
             }
-            // ?? $difference <= 0? Если да, то break.
-            // Это нужно при ситуации если например нужно 3 оператора, а доступных типов смен 2 или 4
-            // Не надо проходить 2 по 2 или все 4, надо прервать раньше
+            // ?? $difference <= 0? If yes, then break.
+            // This is needed for situation when we need 3 agents, but only 2 or 4 available shift types
+            // We do not need to pass 2 by 2 or all 4, we need to stop earlier
             if($difference[$j] <= 0){
                 break;
             }
@@ -542,9 +543,9 @@ print_r('<br><br>');
 
 for($i = 0; $i < $dimension; $i++){
     for($j = 0; $j < $dayQuarters; $j++){
-        // Важное условие!
-        // $difference>0 ? Если да, то добавлять смен столько, какая разница
-        // Добавлять смены можно только в некоторых местах, поэтому проверяем разницу только в этих местах
+        // Important condition!
+        // $difference > 0 ? If yes, add as many shifts as the difference requires
+        // Shifts can only be added at certain points, so we only check the difference at those points
         if($difference[$j] > 0 && $j == $startFillingPoints[$i]) {
             $phantoms[$i] = $phantoms[$i] + $difference[$j];
             // пересчитать $phantomsScheduled и $difference
@@ -560,11 +561,11 @@ for($i = 0; $i < $dimension; $i++){
 }
 */
 
-print_r('Сколько в итоге понадобилось phantoms<br>');
+print_r('Total phantoms needed<br>');
 var_dump($phantoms);
 
 print_r('<br>');
-// Проверка кол-ва фантомных FTE
+// Check number of phantom FTE
 print_r('phantomsScheduled:<br>');
 for ($j = 0; $j < $dayQuarters; $j++) {
     print_r($phantomsScheduled[$j]);
@@ -576,7 +577,7 @@ for ($j = 0; $j < $dayQuarters; $j++) {
 }
 print_r('<br>');
 print_r('<br>');
-// Проверка массива разниц прогноза и составленного расписания
+// Check difference between forecast and scheduled coverage
 print_r('difference:<br>');
 for($k = 0; $k < $dayQuarters; $k++) {
     //$difference[$k] = $agentsNeeded[$k] - $phantomsScheduled[$k];
@@ -584,21 +585,21 @@ for($k = 0; $k < $dayQuarters; $k++) {
     print_r(' ');
     //print_r('<br>');
 }
-// Проверить SL за день.
-// Вывести итоговый SL
+// Check SL for the day
+// Output final SL
 
-// Подготовительные вспомогательные функции для вычисления SL
-// $fc - прогноз звонков за 15 минут
-// $agents - количество агентов по факту, а не по прогнозу
-// $aht - средняя продолжительность обслуживания в секундах
+// Helper functions for SL calculation
+// $fc – forecasted calls for a 15-min interval
+// $agents – actual number of agents scheduled, not forecasted
+// $aht – average handling time in seconds
 function ErlangSL($fc,$agents,$aht) {
     if($aht == 0){
-        $SL = 0; // Т.к. при вычислении средневзвешенного SL умножается на количество звонков, то
+        $SL = 0; // Since the weighted-average SL is multiplied by the number of calls, then
     } else {
-        $fc = $fc/15; // Прогноз звонков за 1 минуту
-        $beta = $aht/60; // Переводим из AHT в секундах в бэта в минутах
-        $a = $beta * $fc; // сколько рабочих минут потребуется для обслуживания поступивших звонков
-        $tta = 20/60; // Считаем целевой SL = 80% на 20 секунд, приводим 20 секунд к минутам
+        $fc = $fc/15; // Forecasted calls per 1 minute
+        $beta = $aht/60; // Convert AHT in seconds to beta in minutes
+        $a = $beta * $fc; // number of working minutes required to handle the incoming calls
+        $tta = 20/60; // We assume the target SL = 80% in 20 seconds; convert 20 seconds to minutes
         $tempExp = -($agents/$beta - $fc)*$tta;
         $SL = 1 - C($agents, $a) * exp($tempExp);
         if ($SL<0) {
@@ -608,10 +609,10 @@ function ErlangSL($fc,$agents,$aht) {
     return $SL;
 }
 
-// Вспомогательная функция для вычисления SL
+// Helper function for SL calculation
 function C($s,$a) {
-    $denominator = Factorial($s-1)*($s-$a); // Знаменатель
-    if($denominator <> 0){ // Иногда знаменатель получается равным нулю, в этом случае нужно SL свести в ноль
+    $denominator = Factorial($s-1)*($s-$a); // Denominator
+    if($denominator <> 0){ // Sometimes the denominator turns out to be zero; in that case, SL must be reduced to zero
         $firstStep = pow($a,$s)/$denominator;
         $secondStep = 0;
         for ($j=0; $j<=$s-1; $j++){
@@ -619,13 +620,13 @@ function C($s,$a) {
         }
         $secondStep = $secondStep + $firstStep;
         $c = $firstStep / $secondStep;
-    } else { // При таком значении в функции выше SL получится равным нулю
+    } else { // With such a value in the function above, SL will equal zero
         $c = 1;
     }
     return $c;
 }
 
-// Функция вычисления факториала
+// Function for factorial calculation
 function Factorial($x) {
     $y = 1;
     for ($i = 1; $i < $x; $i++) {
@@ -634,13 +635,13 @@ function Factorial($x) {
     return $y;
 }
 
-// Вычисляем средневзвешенный по количеству прогнозируемых звонков SL
-// Чистый SL на каждом промежутке
+// Weighted SL calculation by forecasted call volume
+// Raw SL per interval
 $shiftsSL = [];
 for ($j = 0; $j < $dayQuarters; $j++) {
     $shiftsSL[$j] = ErlangSL($forecast[$j], $phantomsScheduled[$j], $ahtSeconds[$j]);
 }
-// "взвешиваем" SL по прогнозу количества звонков
+// Weighted SL by forecasted calls
 $sumSLWeighted = 0;
 $sumForecast = 0;
 for ($j = 0; $j < $dayQuarters; $j++) {
@@ -648,9 +649,9 @@ for ($j = 0; $j < $dayQuarters; $j++) {
     $sumForecast = $sumForecast + $forecast[$j];
 }
 $averageWeightedSL = $sumSLWeighted / $sumForecast;
-// Приводим к отображению в виде процентов
+// Convert to display as percentages
 $averageWeightedSL = round($averageWeightedSL * 100,2,PHP_ROUND_HALF_UP) . '%';
 
 print_r('<br>');
-print_r('<br>Получившийся SL после первого шага = ');
+print_r('<br><br>Resulting SL after the first step = ');
 print_r($averageWeightedSL);
