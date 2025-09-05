@@ -1,0 +1,512 @@
+<?php
+// The algorithm is based on the statistics of the real contact centre
+// We took the statistic of one week in June 2022
+// The main part of the schedule consists of 9 hours shifts: 8 hours work and 1 hour breaks
+// We made the task simpler: we generated the schedule for one day from 5:00 am to 1:00 am
+// We worked with such a period because of constrainments: shifts can start from 5:00 am to 4:00 pm
+// We made the task even simpler: we assume that the number of agents is infinite
+// For future versions - if we have insufficient operators, than we'll lower the forecast
+// We'll try to cover the lowered forecast by shifts
+// We made the task simpler: we use only one type of shifts
+
+$dayHours = 20;
+// The number of hours in the working day that should be covered by schedule
+// Even for 24-hours inbound line we can divide thee task by days
+// TODO develop the algorithm for dividing the scheduling period by days
+$dayQuarters = $dayHours * 4;
+// The number of 15 minutes periods in a day
+
+// Calls forecast for every 15 minutes
+$forecast = [
+    3,
+    1,
+    3,
+    2,
+    6,
+    4,
+    7,
+    3,
+    5,
+    6,
+    5,
+    7,
+    8,
+    8,
+    10,
+    9,
+    13,
+    14,
+    17,
+    14,
+    17,
+    22,
+    19,
+    20,
+    20,
+    22,
+    21,
+    22,
+    20,
+    24,
+    21,
+    20,
+    19,
+    21,
+    21,
+    20,
+    26,
+    22,
+    24,
+    21,
+    22,
+    23,
+    21,
+    19,
+    24,
+    22,
+    18,
+    16,
+    20,
+    19,
+    22,
+    18,
+    19,
+    20,
+    16,
+    16,
+    12,
+    13,
+    13,
+    11,
+    10,
+    8,
+    8,
+    9,
+    10,
+    7,
+    6,
+    4,
+    4,
+    3,
+    3,
+    2,
+    5,
+    1,
+    2,
+    2,
+    1,
+    1,
+    3,
+    1,
+];
+
+// FTE forecast for every 15 minutes
+$agentsNeeded = [
+    3,
+    2,
+    3,
+    2,
+    4,
+    3,
+    3,
+    3,
+    4,
+    4,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    7,
+    7,
+    9,
+    8,
+    9,
+    11,
+    10,
+    11,
+    10,
+    12,
+    11,
+    11,
+    10,
+    12,
+    11,
+    10,
+    10,
+    10,
+    10,
+    10,
+    13,
+    11,
+    12,
+    11,
+    11,
+    11,
+    11,
+    10,
+    12,
+    11,
+    10,
+    9,
+    10,
+    10,
+    11,
+    10,
+    10,
+    11,
+    9,
+    9,
+    7,
+    7,
+    7,
+    6,
+    6,
+    5,
+    5,
+    6,
+    6,
+    5,
+    5,
+    3,
+    4,
+    3,
+    3,
+    3,
+    5,
+    2,
+    2,
+    3,
+    2,
+    1,
+    3,
+    2,
+];
+
+// AHT for every 15 minutes
+// It is required in the end to check SL
+$ahtSeconds = [
+    266,
+    306,
+    294,
+    282,
+    230,
+    253,
+    178,
+    248,
+    269,
+    278,
+    279,
+    261,
+    301,
+    316,
+    292,
+    315,
+    287,
+    292,
+    294,
+    302,
+    311,
+    316,
+    312,
+    326,
+    316,
+    327,
+    320,
+    313,
+    313,
+    316,
+    315,
+    313,
+    302,
+    295,
+    298,
+    306,
+    307,
+    297,
+    307,
+    310,
+    306,
+    303,
+    310,
+    298,
+    312,
+    322,
+    331,
+    322,
+    317,
+    326,
+    324,
+    337,
+    325,
+    332,
+    310,
+    322,
+    311,
+    305,
+    281,
+    295,
+    299,
+    295,
+    304,
+    298,
+    297,
+    315,
+    339,
+    306,
+    371,
+    309,
+    392,
+    362,
+    415,
+    401,
+    314,
+    443,
+    324,
+    83,
+    279,
+    306,
+];
+
+// Array for shifts
+// First - 9-hour shifts without breaks
+$shifts = [];
+// i - the number of different shifts
+// j - is FTE working during this 15 minutes interval
+
+// Shifts start only in particular moments. "Any time" is used very rarely.
+$startFillingPoints = [
+    // From what 15 minutes interval we need to fill arrays
+    0, // 5:00 am
+    //2, // 5:30
+    4, // 6:00 am
+    //6, // 6:30
+    8, // 7:00
+    //10,// 7:30
+    12,// 8:00
+    //14,// 8:30
+    //16,// 9:00
+    //18,// 9:30
+    20,// 10:00
+    22,// 10:30
+    24,// 11:00
+    //26,// 11:30
+    28,// 12:00
+    //30,// 12:30
+    32,// 13:00 // 1:00 pm
+    //34,// 13:30
+    36,// 14:00 // 2:00 pm
+    //38,// 14:30
+    40,// 15:00 // 3:00 pm
+    //42,// 15:30
+    44,// 16:00 // 4:00 pm
+    //46,// 16:30
+    //48,// 17:00
+    //50,// 17:30
+    //52,// 18:00
+    //54,// 18:30
+    //56,// 19:00
+    //58,// 19:30
+    //60,// 20:00
+    //62,// 20:30
+    //64,// 21:00
+];
+// Space dimension of shifts - the number of possible shift starting points
+$dimension = count($startFillingPoints);
+
+$shiftHours = 9;
+// The number of hours  in a shift - a user can change that setting, shifts can last 4, 6.5, 9 or 12 hours
+$shiftQuarters = $shiftHours * 4;
+// The number of 15 minutes intervals in a shift
+
+// Here we fill the timeline by 9 hour working intervals without breaks
+for ($i = 0; $i < $dimension; $i++){
+    for ($j = 0; $j < $dayQuarters; $j++) {
+        if ($j >= $startFillingPoints[$i] && $j < $startFillingPoints[$i] + $shiftQuarters) {
+            $shifts[$i][$j] = 1;
+        } else {
+            $shifts[$i][$j] = 0;
+        }
+    }
+}
+print_r('<pre>');
+
+print_r('shifts:<br>');
+// Output on the screen for checking
+for ($i = 0; $i < $dimension; $i++){
+    for ($j = 0; $j < $dayQuarters; $j++) {
+        print_r($shifts[$i][$j]);
+        print_r(' ');
+    }
+    print_r('<br>');
+}
+print_r('<br>');
+
+print_r('agentsNeeded:<br>');
+// Output the array with the forecasted FTE
+for ($j = 0; $j < $dayQuarters; $j++) {
+    print_r($agentsNeeded[$j]);
+    if(strlen($agentsNeeded[$j]) == 1){
+        print_r(' ');
+    } elseif (strlen($agentsNeeded[$j]) == 2){
+        print_r('');
+    }
+}
+print_r('<br>');
+print_r('<br>');
+
+// We have got the array with shifts, we create the schedule with them
+// Of course, during the real schedule generation we need to extract possible start times from a database
+// Shift boundaries need to be converted into arrays of 0s and 1s
+// Phantoms will later take those shifts, the number of phantoms is infinite
+// We assume that there is no constraints about non-working time between shifts
+// The constraints "between shifts" will be checked when agents are given phantom shifts
+// In this first draft of the algorithm we delegate the most complicated constraint to users
+
+// Phantoms array is equal the number of shifts - this is the number of taken shifts for this schedule
+$phantoms = [];
+// Filling with default values
+for ($i = 0; $i < $dimension; $i++) {
+    $phantoms[] = 0;
+}
+
+print_r('<br>');
+
+// Make a copy array of forecasted FTE and fill with 0s to understand, how many FTE we have taken by scheduling
+// We check adherence between the forecast and the schedule with the help of this array
+$phantomsScheduled = $agentsNeeded;
+for ($j = 0; $j < $dayQuarters; $j++) {
+    $phantomsScheduled[$j] = 0;
+}
+
+// Array of differences
+// This array is already filled with 0s "as scheduled", so we need only to copy it
+$difference = $phantomsScheduled;
+
+for($j = 0; $j < $dayQuarters; $j++) {
+    $difference[$j] = $agentsNeeded[$j] - $phantomsScheduled[$j];
+    // $difference>0 ? If yes, then to add so many shifts as the difference
+}
+// Go by larger loop of phantoms - how many we should  take them
+// We should check the difference between forecast and schedule of phantom FTEs
+for($i = 0; $i < $dimension; $i++){
+    for($j = 0; $j < $dayQuarters; $j++){
+        // Important condition!
+        // difference>0 ? If yes, then to add so many shifts as the difference
+        // We are permitted to add shifts only in particular moments, so we need to check difference only in those moments
+        if($difference[$j] > 0 && $j == $startFillingPoints[$i]) {
+            $phantoms[$i] = $phantoms[$i] + $difference[$j];
+            // recalculate $phantomsScheduled and $difference
+            for($k = $startFillingPoints[$i]; $k < $startFillingPoints[$i] + $shiftQuarters; $k++){
+                $phantomsScheduled[$k] = $phantomsScheduled[$k] + $phantoms[$i];
+            }
+            for($j = 0; $j < $dayQuarters; $j++) {
+                $difference[$j] = $agentsNeeded[$j] - $phantomsScheduled[$j];
+            }
+            break;
+        }
+    }
+}
+
+print_r('How many phantoms are needed<br>');
+var_dump($phantoms);
+
+print_r('<br>');
+// Checking the number of phantom  FTE
+print_r('phantomsScheduled:<br>');
+for ($j = 0; $j < $dayQuarters; $j++) {
+    print_r($phantomsScheduled[$j]);
+    if(strlen($phantomsScheduled[$j]) == 1){
+        print_r(' ');
+    } elseif (strlen($phantomsScheduled[$j]) == 2){
+        print_r('');
+    }
+}
+print_r('<br>');
+print_r('<br>');
+// Checking the array of difference between the forecast and the schedule
+print_r('difference:<br>');
+for($k = 0; $k < $dayQuarters; $k++) {
+    $difference[$k] = $agentsNeeded[$k] - $phantomsScheduled[$k];
+    print_r($difference[$k]);
+    print_r(' ');
+}
+// To check daily SL
+// To show the final SL
+
+// Support functions for calculating SL
+// $fc - calls forecast for 15 minutes
+// $agents - actual number of agents, not forecast
+// $aht - average handling time in seconds
+function ErlangSL($fc,$agents,$aht) {
+    if($aht == 0){
+        $SL = 0;
+        // Because calculation of weighted average SL needs to multiply SL on the number of calls, so
+    } else {
+        $fc = $fc/15;
+        // Calls forecast for 1 minute
+        $beta = $aht/60;
+        // Converting from AHT in seconds into beta in minutes
+        $a = $beta * $fc;
+        // How many work minutes are needed for handling actual calls
+        $tta = 20/60;
+        // Assume goal SL = 80% per 20 seconds, convert 20 seconds into minutes
+        $tempExp = -($agents/$beta - $fc)*$tta;
+        $SL = 1 - C($agents, $a) * exp($tempExp);
+        if ($SL<0) {
+            $SL = 0;
+        }
+    }
+    return $SL;
+}
+
+// The support function for SL calculating
+function C($s,$a) {
+    $denominator = Factorial($s-1)*($s-$a);
+    // denominator
+    if($denominator <> 0){
+        // Sometime denominator equals 0, in this case we assume SL equals 0
+        $firstStep = pow($a,$s)/$denominator;
+        $secondStep = 0;
+        for ($j=0; $j<=$s-1; $j++){
+            $secondStep = $secondStep + (pow($a,$j) / Factorial($j));
+        }
+        $secondStep = $secondStep + $firstStep;
+        $c = $firstStep / $secondStep;
+    } else {
+        // With such a value SL is equal 0
+        $c = 1;
+    }
+    return $c;
+}
+
+// Function for factorial calculation
+function Factorial($x) {
+    $y = 1;
+    for ($i = 1; $i < $x; $i++) {
+        $y = $y*($i+1);
+    }
+    return $y;
+}
+
+// Calculating weighted average SL by the number of forecasted calls
+// First - SL on every interval
+$shiftsSL = [];
+for ($j = 0; $j < $dayQuarters; $j++) {
+    $shiftsSL[$j] = ErlangSL($forecast[$j], $phantomsScheduled[$j], $ahtSeconds[$j]);
+}
+// Second - add weight to SL by the calls number
+$sumSLWeighted = 0;
+$sumForecast = 0;
+for ($j = 0; $j < $dayQuarters; $j++) {
+    $sumSLWeighted = $sumSLWeighted + $forecast[$j] * $shiftsSL[$j];
+    $sumForecast = $sumForecast + $forecast[$j];
+}
+$averageWeightedSL = $sumSLWeighted / $sumForecast;
+// Convert to percents
+$averageWeightedSL = round($averageWeightedSL * 100,2,PHP_ROUND_HALF_UP) . '%';
+
+print_r('<br>');
+print_r('<br>SL after the first step = ');
+print_r($averageWeightedSL);
