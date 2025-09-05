@@ -2690,7 +2690,7 @@ function ErlangSL($fc,$agents,$aht) {
 // Helper function to compute SL
 function C($s,$a) {
     $denominator = Factorial($s-1)*($s-$a); // Denominator
-    if($denominator <> 0){ /// Sometimes denominator becomes zero; in that case SL should be reduced to zero
+    if($denominator <> 0){ // Sometimes denominator becomes zero; in that case SL should be reduced to zero
         $firstStep = pow($a,$s)/$denominator;
         $secondStep = 0;
         for ($j=0; $j<=$s-1; $j++){

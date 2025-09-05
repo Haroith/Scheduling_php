@@ -1,11 +1,11 @@
 <?
-// Здесь нам надо будет перейти от массива с количеством фантомов с разбивкой по сменам
-// к массиву с каждым отдельным фантомом
-// Теперь нам понадобится большая фактическая матрица, где каждый большой элемент - 1 смена с добавленными перерывами
+// Here we will need to move from an array with the number of phantoms broken down by shifts
+// to an array with each individual phantom
+// Now we will need a large actual matrix, where each large element is 1 shift with added breaks
 
 include_once('2_scheduling_balance_shifts.php');
-print_r('<br><br>Третий шаг<br>');
-print_r('Добавляем перерывы<br>');
+print_r('<br><br>Third step<br>');
+print_r('Adding breaks<br>');
 
 $countAllPhantomShifts = [];
 for($k=0; $k<$shiftKinds; $k++){
@@ -22,7 +22,7 @@ for($j=0; $j<$shiftKinds; $j++) {
     }
 }
 print_r('phantomsShifts:<br>');
-// Вывод для проверки
+// Output for verification
 for($k=0; $k<$shiftKinds; $k++) {
     for ($i = 0; $i < $countAllPhantomShifts[$k]; $i++) {
         for ($j = 0; $j < $dayQuarters; $j++) {
@@ -35,9 +35,9 @@ for($k=0; $k<$shiftKinds; $k++) {
 print_r('<br>');
 print_r('<br>');
 
-// Ещё раз напоминание
-// Если в $difference значение > 0, то это недостаффинг, FTE не хватает
-// Если в $difference значение < 0, то это перестаффинг, FTE больше нужного
+// Reminder again
+// If the value in $difference > 0, it means under-staffing, FTE is insufficient
+// If the value in $difference < 0, it means over-staffing, FTE exceeds the required amount
 print_r('difference:<br>');
 for ($j = 0; $j < $dayQuarters; $j++) {
     if(strlen($difference[$j]) == 1){
@@ -54,33 +54,35 @@ for ($j = 0; $j < $dayQuarters; $j++) {
 print_r('<br>');
 print_r('<br>');
 
-// Возьмём из БД и преобразуем в удобный для нас вид ограничения перерывов
-// Для 4.25 часов 1 перерыв по 15 минут, для 6.30 часов 2 перерыва по 15 минут, для 9 часов 3 перерыва:
-// Расширим алгоритм, теперь нужно добавить перерывы для трёх видов смен
-// В отличие от смен перерывы могут быть разной длительности, что тоже надо заложить
+// Take break constraints from the database and convert them into a convenient format
+// For 4.25-hour shift: 1 break of 15 minutes
+// For 6.5-hour shift: 2 breaks of 15 minutes
+// For 9-hour shift: 3 breaks
+// We are extending the algorithm; now we need to add breaks for three types of shifts
+// Unlike shifts, breaks can have different durations, which also needs to be accounted for
 
-// Расписание составляется с дискретным шагом по 15 минут
-// Длительность 15 минут = 1, 30 минут = 2, 1 час = 4 раза по 15 минут = 4
+// Scheduling is done in discrete steps of 15 minutes
+// Duration 15 minutes = 1, 30 minutes = 2, 1 hour = 4 (15-minute units)
 
-// В БД начало перерывов записано "от начала смены",
-// значит позже надо будет пересчитывать через массив $startFillingPoints
+// In the database, break start is recorded "from the start of the shift"
+// Later we will need to recalculate using the $startFillingPoints array
 
-// Начальные точки перерывов взяты из настроек смен "448 Орел 1,0", "448 Орел 0,75", "448 Орел 0,5"
-// т.к. у смен "448_1.0", "448_0.75", "448_0.5" периоды перерывов пересекаются или перерыв прописан "в любое время"
-// Нужно будет в редакторе привязки перерыв к сменам сделать проверяльщик на пересечения
-// Либо ставить ограничения пользователю, либо делать гораздо более сложный алгоритм подбора, который бы "догадывался" сам
+// Initial break points are taken from shift settings "448 Orël 1.0", "448 Orël 0.75", "448 Orël 0.5"
+// Since in shifts "448_1.0", "448_0.75", "448_0.5" break periods overlap or are set to "any time"
+// A check for overlap must be added in the break-to-shift editor
+// Either set restrictions for the user or implement a much more complex selection algorithm that would "guess" automatically
 
-// "Нулевой" уровень - к какому типу смены относятся перерывы
-// Первый уровень - порядковый номер перерыва
-// Второй уровень - длительность перерыва в 15ти минутках
-// Третий уровень - моменты начала
-// Нужно манипулировать с моментами начала, они должны быть значениями, а не ключами
+// "Zero" level – which shift type the breaks belong to
+// First level – ordinal number of the break
+// Second level – break duration in 15-minute units
+// Third level – start moments
+// Need to manipulate start moments; they should be values, not keys
 
-// Порядковый номер перерыва в прототипе будет не равен 0 и не равен 1, чтобы отличать от no-activity и от основной активности
-// Все перерывы уникальны, нельзя сказать "такой тип перерыва 2 раза за смену"
-// Нужно создать формально 2 разных перерыва
+// In the prototype, the break ordinal number will not be 0 or 1 to distinguish from no-activity and main activity
+// All breaks are unique; you cannot say "this type of break occurs twice in a shift"
+// Formally, we need to create 2 different breaks
 
-// Перерывы для 9-ти часовой смены
+// Breaks for 9-hour shift
 $startBreakPoints[0] = [
     2 => [
         1 => [
@@ -121,7 +123,7 @@ $startBreakPoints[0] = [
     ],
 ];
 
-// Перерывы для 6.5-ти часовой смены
+// Breaks for 6.5-hour shift
 $startBreakPoints[1] = [
     5 => [
         1 => [
@@ -149,7 +151,7 @@ $startBreakPoints[1] = [
     ],
 ];
 
-// Перерывы для 4.25-ти часовой смены
+// Breaks for 4.25-hour shift
 $startBreakPoints[2] = [
     7 => [
         1 => [
@@ -164,29 +166,29 @@ $startBreakPoints[2] = [
     ],
 ];
 
-// Перерывы надо раздать в любом случае всем фантомам,
-// поэтому большим циклом пойдём по $phantomsShifts, внутри будем сверяться с $difference
+// Breaks must be distributed in any case to all phantoms,
+// so we will iterate over $phantomsShifts and compare with $difference
 
 for ($w = 0; $w < $shiftKinds; $w++){
     for ($i = 0; $i < $countAllPhantomShifts[$w]; $i++){
         //$i=0;
         $startPhantomShiftPoint = 0;
         for ($j = 0; $j < $dayQuarters; $j++) {
-            // Начальную точку конкретной смены нельзя взять из массива $startFillingPoints,
-            // т.к. есть несколько изначально одинаковых одинаковых фантомов
-            // Будем ориентироваться на позицию первой единицы
+            // The initial point of a specific shift cannot be taken from the $startFillingPoints array,
+            // because there are several initially identical phantoms
+            // We will base it on the position of the first 1
             if($phantomsShifts[$w][$i][$j] == 1){
                 $startPhantomShiftPoint = $j;
                 break;
             }
         }
 
-        // Теперь можно из этой точки $startPhantomShiftPoint и массива относительных начал $startBreakPoints получить
-        // начала перерывов относительно дня и начать сверяться с $difference
+        // Now, from this point $startPhantomShiftPoint and the array of relative start points $startBreakPoints,
+        // we can get the break start moments relative to the day and start comparing with $difference
         $dayStartBreakPoints = $startBreakPoints;
-        // Изначально неизвестно, сколько перерывов и сколько внутри точек старта, массив не одномерный
-        // поэтому придётся искусственно переопределять значения через foreach
-        // Передача по ссылке тоже корректно не работает =(
+        // Initially, it is unknown how many breaks and how many start points inside; the array is not one-dimensional
+        // Therefore, we will artificially redefine values using foreach
+        // Passing by reference also does not work correctly =(
         foreach ($dayStartBreakPoints[$w] AS $breakNumber => $break){
             foreach ($break AS $breakLength => $breakStarts){
                 foreach ($breakStarts AS $breakStartsKeys => $startPoints){
@@ -195,32 +197,32 @@ for ($w = 0; $w < $shiftKinds; $w++){
             }
         }
 
-        // Распределим перерывы так же, как распределяли смены - наслоением
-        // но при этом сверяемся с difference
-        // Идти надо по перерывам, т.к. каждый надо распределить по 1 разу
-        // Придётся применять чудовищную конструкцию выше
+        // We will distribute breaks the same way we distributed shifts – by layering
+        // But we will compare with difference
+        // We need to iterate over breaks, as each must be distributed once
+        // We will have to use the monstrous construction above
         foreach ($dayStartBreakPoints[$w] AS $breakNumber => $break){
             foreach ($break AS $breakLength => $breakStarts){
-                // $breakLength - это длительность перерыва
-                // $breakStarts - это массив точек начала
+                // $breakLength – this is the duration of the break
+                // $breakStarts – this is an array of start points
 
                 $maxOverStaffing = $difference[$breakStarts[0]];
                 $maxOverStaffingPoint = $breakStarts[0];
                 foreach ($breakStarts AS $breakStartsKeys => $startPoint){
-                    // При помощи массива $breakStarts нужно пройти по $difference
-                    // и выбрать период размера $breakLength с самым большим перестаффингом
-                    // Сделаем проще - будем проверять только точку начала
+                    // Using the $breakStarts array, we need to iterate over $difference
+                    // and select a period of size $breakLength with the highest over-staffing
+                    // To simplify – we will check only the start point
 
-                    // Снова напоминание, что < 0 - это лишние FTE
+                    // Reminder: < 0 means excess FTE
                     if ($difference[$startPoint] < $maxOverStaffing){
                         $maxOverStaffing = $difference[$startPoint];
                         $maxOverStaffingPoint = $startPoint;
                     }
 
                 }
-                // Получили точку с оверстаффингом
-                // Теперь надо сделать столько пометок, какова длительность перерыва
-                // Вместе с этим действием пересчитать difference, чтобы было с чем сравнивать
+                // We get the point with the highest over-staffing
+                // Now we need to make as many marks as the duration of the break
+                // At the same time, recalculate difference so we have something to compare against
                 for($k=0; $k<$breakLength; $k++){
                     $phantomsShifts[$w][$i][$maxOverStaffingPoint+$k] = $breakNumber;
                     $difference[$maxOverStaffingPoint+$k] += 1;
@@ -231,7 +233,7 @@ for ($w = 0; $w < $shiftKinds; $w++){
 }
 
 
-//Проверим, что у нас получилось
+// Verify the result
 for($k=0; $k<$shiftKinds; $k++){
     for ($i = 0; $i < $countAllPhantomShifts[$k]; $i++){
         for ($j = 0; $j < $dayQuarters; $j++) {
@@ -259,17 +261,17 @@ for ($j = 0; $j < $dayQuarters; $j++) {
     }
 }
 
-// Вычислим получившийся SL
-// Если SL в норме, то ничего не делаем
-// Если SL не в норме, то нужно ещё раз балансировать или дополнять алгоритм выше
+// Compute resulting SL
+// If SL is within acceptable limits, do nothing
+// If SL is not acceptable, we may need to rebalance or extend the algorithm above
 
-// Вычисляем средневзвешенный по количеству прогнозируемых звонков SL
-// Чистый SL на каждом промежутке
+// Compute weighted SL according to the number of forecasted calls
+// Pure SL for each interval
 $shiftsSL = [];
 for ($j = 0; $j < $dayQuarters; $j++) {
     $shiftsSL[$j] = ErlangSL($forecast[$j], ($agentsNeeded[$j]-$difference[$j]), $ahtSeconds[$j]);
 }
-// "взвешиваем" SL по прогнозу количества звонков
+// Weight SL by forecasted call volume
 $sumSLWeighted = 0;
 $sumForecast = 0;
 for ($j = 0; $j < $dayQuarters; $j++) {
@@ -277,9 +279,9 @@ for ($j = 0; $j < $dayQuarters; $j++) {
     $sumForecast = $sumForecast + $forecast[$j];
 }
 $averageWeightedSL = $sumSLWeighted / $sumForecast;
-// Приводим к отображению в виде процентов
+// Convert to percentage for display
 $averageWeightedSL = round($averageWeightedSL * 100,2,PHP_ROUND_HALF_UP) . '%';
 
 print_r('<br>');
-print_r('<br>Получившийся SL после третьего шага = ');
+print_r('<br>Resulting SL after the third step = ');
 print_r($averageWeightedSL);
